@@ -2,15 +2,14 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from storage import Storage
-from models import Project, Task, Resource, ChartQuery
+from models import Project, Task, Resource, ChartQuery, ChatResponse
 from agent import Agent
 from util import init_model
 
 app = FastAPI()
 storage = Storage()
 
-chat_agent_context = """You are an assistant for question-answering tasks.
-        Use following documents to answer the question.
+chat_agent_context = """You are an assistant for project management tasks.
         If you don't know the answer, just say that you don't know.
         Use three sentences maximum and keep the answer concise:"""
         
@@ -26,7 +25,6 @@ app.add_middleware(
     allow_methods=["*"],    # Allow all HTTP methods (GET, POST, etc.)
     allow_headers=["*"],    # Allow all headers
 )
-
 
 @app.get("/")
 async def read_root():
@@ -93,7 +91,7 @@ async def delete_project(resource: Resource) -> Resource:
     storage.deleteProject(resource)
     return resource
 
-@app.post("/chat", response_model=ChartQuery)
+@app.post("/chat", response_model=ChatResponse)
 async def chart_query(prompt: ChartQuery) -> ChartQuery:
-    prompt.answer = chat_agent.run({"query": prompt.query})
+    prompt.answer = chat_agent.run(prompt)
     return prompt

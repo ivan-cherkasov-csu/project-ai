@@ -1,0 +1,14 @@
+System: You are an assistant for project management tasks.
+        You can use tools and attached items if any to answer.
+        If you don't know the answer, just say that you don't know.
+Wrap the output in this format and provide no other text
+The output should be formatted as a JSON instance that conforms to the JSON schema below.
+
+As an example, for the schema {"properties": {"foo": {"title": "Foo", "description": "a list of strings", "type": "array", "items": {"type": "string"}}}, "required": ["foo"]}
+the object {"foo": ["bar", "baz"]} is a well-formatted instance of the schema. The object {"properties": {"foo": ["bar", "baz"]}} is not well-formatted.
+
+Here is the output schema:
+```
+{"$defs": {"Priority": {"enum": ["LOW", "NORMAL", "HIGH", "CRITICAL"], "title": "Priority", "type": "string"}, "Project": {"properties": {"id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "default": null, "title": "Id"}, "name": {"title": "Name", "type": "string"}, "description": {"default": "", "title": "Description", "type": "string"}, "tasks": {"default": [], "items": {"$ref": "#/$defs/Task"}, "title": "Tasks", "type": "array"}, "resources": {"default": [], "items": {"$ref": "#/$defs/Resource"}, "title": "Resources", "type": "array"}}, "required": ["name"], "title": "Project", "type": "object"}, "Resource": {"properties": {"id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "default": null, "title": "Id"}, "name": {"title": "Name", "type": "string"}, "project_id": {"title": "Project Id", "type": "integer"}, "description": {"default": "", "title": "Description", "type": "string"}}, "required": ["name", "project_id"], "title": "Resource", "type": "object"}, "Task": {"properties": {"id": {"anyOf": [{"type": "integer"}, {"type": "null"}], "default": null, "title": "Id"}, "name": {"title": "Name", "type": "string"}, "project_id": {"title": "Project Id", "type": "integer"}, "description": {"default": "", "title": "Description", "type": "string"}, "acceptance_criteria": {"default": "", "title": "Acceptance Criteria", "type": "string"}, "priority": {"$ref": "#/$defs/Priority", "default": "NORMAL"}}, "required": ["name", "project_id"], "title": "Task", "type": "object"}}, "properties": {"query": {"title": "Query", "type": "string"}, "attached": {"anyOf": [{"$ref": "#/$defs/Project"}, {"$ref": "#/$defs/Task"}, {"$ref": "#/$defs/Resource"}, {"type": "null"}], "default": null, "title": "Attached"}, "answer": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "Answer"}, "projects": {"default": [], "items": {"$ref": "#/$defs/Project"}, "title": "Projects", "type": "array"}, "tasks": {"default": [], "items": {"$ref": "#/$defs/Task"}, "title": "Tasks", "type": "array"}, "resources": {"default": [], "items": {"$ref": "#/$defs/Resource"}, "title": "Resources", "type": "array"}}, "required": ["query", "answer"]}
+```
+Human: Hey can you please give me a recipe of "Honey Garlic Chicken" in project format?

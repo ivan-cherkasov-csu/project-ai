@@ -1,12 +1,11 @@
 from sqlalchemy import create_engine, Column, Integer, String, Enum, Engine, ForeignKey
 from sqlalchemy.orm import relationship, declarative_base
 from sqlalchemy.orm import sessionmaker
-from models import Project, Task, Resource, Priority, deserialize_json, BaseModel
-from vector_store import VectorStore
-from typing import Generic, TypeVar, Type
+from models import Project, Task, Resource, Priority, BaseModel, T
+from vector_store import VectorStore, Iterable
+from typing import List, Union, TypeVar, Type
 
 Base = declarative_base()
-T = TypeVar('T')
 
 class ProjectsTable(Base):
     __tablename__ = "projects"
@@ -46,6 +45,8 @@ class Storage(object):
         self.__session = sessionmaker(autocommit=False, autoflush=False, bind=self.__engine)
         Base.metadata.create_all(self.__engine)
         self.__index = VectorStore()
+        
+    def index(self) -> VectorStore: return self.__index
 
     def addTask(self, task: Task) -> None:
         if not task.project_id: raise ValueError("Task.project_id should be valid int value")
@@ -165,7 +166,27 @@ class Storage(object):
                 session.delete(db_item)
                 session.commit()
                 self.__delete_index(resource.id, Resource)
+                
+    def find_item_type(self, query: str, item_type: Type[T]) -> List[T]:
+        items = self.__index.find_items(query, item_type)
+        result = list(items)
+        if item_type == Project:
+            for item in result:
+                item.tasks = self.getProjectTasks(item.id)
+                item.resources = self.getProjectResources(item.id)
+        return result
     
+    def run(self, query: str) -> List[Union[Project, Task, Resource]]: return self.find_items(query)
+    
+    def find_items(self, query: str) -> List[Union[Project, Task, Resource]]:
+        items = self.__index.find(query)
+        result = []
+        for item in items:
+            if item is Project:
+                item = self.rehydrate_project(item)
+            result.append(item)
+        return result
+        
     def deleteProject(self, project: Project) -> None:
         with self.__session() as session:
             db_items = session.query(TasksTable).filter(TasksTable.project_id == project.id).all()
@@ -201,11 +222,7 @@ class Storage(object):
         uid = f"{item_type}_{id}"
         self.__index.delete_item(uid)
         
-    def __find(self, query:str, data_type: Type[T]) -> list[T]:
-        item_type = data_type.__name__
-        items = self.__index.find_items(query, item_type)
-        result = []
-        for json, t in items:
-            item = deserialize_json(json, data_type)
-            result.append(item)
-        return result
+    def rehydrate_project(self, item: Project) -> Project:
+        item.tasks = self.getProjectTasks(item.id)
+        item.resources = self.getProjectResources(item.id)
+        return item

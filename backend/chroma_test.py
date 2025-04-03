@@ -1,28 +1,35 @@
-from vector_store import VectorStore
+from storage import Storage
 import unittest
-from models import Project, Task, Resource, deserialize_json
+from models import Project, Task
 
 class VectorStoreTests(unittest.TestCase):
-    store = VectorStore()
+    db = Storage()
+    
+    def test_can_find_and_rehydrate_project(self) -> None:
+        query = "Honey Garlic Chicken"
+        projects = list(self.db.find_item_type(query, Project))
+        result = None
+        for project in projects:
+            if project.name == query:
+                result = project
+                
+        self.assertIsNotNone(result)
+        self.assertGreaterEqual(len(result.tasks), 1)
     
     def test_can_retrieve_item(self) -> None:
         query = "Salad"
-        items = list(self.store.find_items(query))
-        self.assertIsNotNone(items)
+        projects = list(self.db.index().find_items(query, Project))
+        self.assertIsNotNone(projects)
         
-        for json, i_type in items:
-            if i_type == Task.__name__:
-                data = deserialize_json(json, Task)
-                self.assertIsNotNone(data)
-            elif i_type == Project.__name__:
-                data = deserialize_json(json, Project)
-                self.assertIsNotNone(data)
-            elif i_type == Resource.__name__:
-                data = deserialize_json(json, Resource)
-                self.assertIsNotNone(data)
-            else:
-                print(json)
-                raise ValueError(f"Unknown item type {i_type}")
+        for project in projects:
+            self.assertIsNotNone(project.id)
+            self.assertIsNotNone(project.name)
+            self.assertIsNotNone(project.description)
+        
+    def test_exclude(self) -> None:
+        task = Task(name="foo", description="bar", project_id=-1)
+        json = task.model_dump_json(exclude={"tasks", "resources"})
+        self.assertIsNotNone(json)
             
 if __name__ == '__main__':
     unittest.main()            

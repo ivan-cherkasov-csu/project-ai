@@ -1,16 +1,9 @@
 import unittest
 from models import Task, Project, Resource
 from storage import Storage
-from vector_store import VectorStore
 
 class TestSuit(unittest.TestCase):
     db = Storage()
-    # index = VectorStore()
-    
-    # def setUp(self):
-    #     self.index.reset()
-    #     return super().setUp()
-
     def test_can_add_project_to_db(self):
         project = Project(name="Garlic Shrimp Scampi", description="Sauté shrimp in garlic butter, add lemon juice, and serve over pasta.")
         new_project = self.db.addProject(project)

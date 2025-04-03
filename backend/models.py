@@ -9,9 +9,18 @@ def deserialize_json(json_string: str, data_type: Type[T]) -> T:
     data = json.loads(json_string)
     return data_type.model_validate(data)
 
-class ChartQuery(BaseModel):
+class ChartQuery(BaseModel, Generic[T]):
     query: str
-    answer: str | None
+    attached: T|None = None
+    answer: str | None = None
+    
+class ChatResponse(BaseModel, Generic[T]):
+    query: str
+    answer: str | None 
+    projects: list['Project'] = []
+    tasks: list['Task'] = []
+    resources: list['Resource'] = []
+    
     
 class ProjectPrompt(BaseModel):
     prompt: str
