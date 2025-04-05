@@ -56,7 +56,7 @@ class Storage(object):
             session.add(db_task)
             session.commit()
             task.id = db_task.id
-            self.__add_to_index(task, task.id)
+            self.__index.add_item(task)
             return task
 
     def addProject(self, project: Project) -> Project:
@@ -66,7 +66,7 @@ class Storage(object):
             session.add(db_project)
             session.commit()
             project.id = db_project.id
-            self.__add_to_index(project, project.id)
+            self.__index.add_item(project)
             return project
         
     def addResource(self, resource: Resource) -> None:
@@ -76,7 +76,7 @@ class Storage(object):
             session.add(db_resource)
             session.commit()
             resource.id = db_resource.id
-            self.__add_to_index(resource, resource.id)
+            self.__index.add_item(resource)
             return resource
 
     def getTasks(self) -> list[Task]:
@@ -125,7 +125,7 @@ class Storage(object):
 
             session.add(db_task)
             session.commit()
-            self.__update_index(task, task.id)
+            self.__index.update_item(task)
     
     def updateResource(self, resource: Resource) -> None:
         with self.__session() as session:
@@ -137,7 +137,7 @@ class Storage(object):
 
             session.add(db_resource)
             session.commit()
-            self.__update_index(resource, resource.id)
+            self.__index.update_item(resource)
 
     def updateProject(self, project: Project) -> None:
         with self.__session() as session:
@@ -149,7 +149,7 @@ class Storage(object):
 
             session.add(db_project)
             session.commit()
-            self.__update_index(project, project.id)
+            self.__index.update_item(project)
 
     def deleteTask(self, task: Task) -> None:
         with self.__session() as session:
@@ -204,18 +204,6 @@ class Storage(object):
                 session.delete(db_item)
                 session.commit()
                 self.__delete_index(project.id, Project)
-                
-    def __add_to_index(self, model: BaseModel, id: int) -> None:
-        item_type = type(model).__name__
-        uid = f"{item_type}_{id}"
-        json = model.model_dump_json()
-        self.__index.add_item(json, uid, item_type)
-        
-    def __update_index(self, model: BaseModel, id: int) -> None:
-        item_type = type(model).__name__
-        uid = f"{item_type}_{id}"
-        json = model.model_dump_json()
-        self.__index.update_item(json, uid, item_type)
     
     def __delete_index(self, id: int, data_type: Type[T]) -> None:
         item_type = data_type.__name__

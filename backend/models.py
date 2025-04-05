@@ -12,7 +12,6 @@ def deserialize_json(json_string: str, data_type: Type[T]) -> T:
 class ChartQuery(BaseModel, Generic[T]):
     query: str
     attached: T|None = None
-    answer: str | None = None
     
 class ChatResponse(BaseModel, Generic[T]):
     answer: str 
