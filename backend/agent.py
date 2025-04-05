@@ -17,8 +17,15 @@ class Agent(object):
     def __init__(self, model_name: str, system: str, tools: list[Tool] = []) -> None:
         self.__llm = ChatOllama(model=model_name,temperature=0)
         self.__parser = PydanticOutputParser(pydantic_object=ChatResponse)
-        # self.__parser = PydanticOutputParser(pydantic_object=model)
-        system += linesep + "Wrap the output in this format use the 'answer' field for your response and reasoning, use the rest of the fields for data. Do no provide no other text"+linesep+"{format_instructions}"
+
+        system += """
+Use format instructions below for output. 
+Please respond and provide your reasoning using the 'answer' field of output structure, the rest of the fields are for attached data, you can mention those by name in your answer. 
+If you think you have found relevant data about Project, Task or Resource, please format that data accordingly and put those items into respective fields of output.
+Same with the Projects, Tasks and Resources you want to create, update or delete. 
+Do not provide any other text.
+{format_instructions}
+"""
         self.__prompt = ChatPromptTemplate.from_messages(
             [
                 ("system", system),
@@ -33,9 +40,9 @@ class Agent(object):
 
     def run(self, query: ChartQuery) -> ChatResponse | None:
         response = self.__executor.invoke(query.model_dump())
+        output = response.get("output")
         try:
-            return self.__parser.parse(response.get("output"))
+            return self.__parser.parse(output)
         except Exception as e:
-            print(f"Cannot parse response: {e}")
-            return None
+            return ChatResponse(answer=output)
     

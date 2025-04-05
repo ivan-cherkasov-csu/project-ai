@@ -1,19 +1,18 @@
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from storage import Storage
+from tools import get_rag_tool, get_search_tool, Storage
 from models import Project, Task, Resource, ChartQuery, ChatResponse
 from agent import Agent
-from util import init_model
 
 app = FastAPI()
 storage = Storage()
 
 chat_agent_context = """You are an assistant for project management tasks.
-        If you don't know the answer, just say that you don't know.
-        Use three sentences maximum and keep the answer concise:"""
+        You can use tools and attached items if any to answer.
+        If you don't know the answer, just say that you don't know."""
         
-chat_agent = Agent(llm=init_model(), system=chat_agent_context)
+chat_agent = Agent(model_name='qwen2.5', system=chat_agent_context,tools=[get_search_tool(), get_rag_tool(Storage())])
 
 origins = [
     "http://localhost:5173"  # Allow all paths for this origin
@@ -42,7 +41,7 @@ async def get_tasks() -> list[Task]:
 async def get_resources():
     return storage.getResources()
 
-@app.get("/project/tasks/{project_id}", response_model=list[Task])
+@app.get("/tasks/{project_id}", response_model=list[Task])
 async def get_project_tasks(project_id: int) -> list[Task]:
     return storage.getProjectTasks(project_id)
 

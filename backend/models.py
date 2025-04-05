@@ -15,8 +15,7 @@ class ChartQuery(BaseModel, Generic[T]):
     answer: str | None = None
     
 class ChatResponse(BaseModel, Generic[T]):
-    query: str
-    answer: str | None 
+    answer: str 
     projects: list['Project'] = []
     tasks: list['Task'] = []
     resources: list['Resource'] = []

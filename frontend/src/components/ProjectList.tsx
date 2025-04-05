@@ -4,11 +4,13 @@ import ProjectControl from "./ProjectControl";
 import ThemeToggle from "./ThemeToggle";
 
 interface Task {
-  id: number;
+  id?: number; // Optional for new tasks
   name: string;
+  project_id: number;
   description: string;
+  acceptance_criteria: string;
+  priority: "LOW" | "NORMAL" | "HIGH" | "CRITICAL"; // Matches FastAPI Enum
 }
-
 interface Resource {
   id?: number; // Optional for new resources
   name: string;
@@ -72,7 +74,7 @@ const ProjectList: React.FC = () => {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-black dark:text-white">Projects</h1>
       </div>
-      <ThemeToggle/>
+      {/* <ThemeToggle/> */}
       {projects.map((project) => (
         <ProjectControl
           key={project.id}

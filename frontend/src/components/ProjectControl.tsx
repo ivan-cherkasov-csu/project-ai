@@ -1,28 +1,10 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ResourceControl from "./ResourceControl";
+import ChatSidebar from "./ChatSidebar";
+import TaskControl from "./TaskControl"; // Import TaskControl
 import axios from "axios";
-
-interface Task {
-  id: number;
-  name: string;
-  description: string;
-}
-
-interface Resource {
-  id?: number; // Optional for new resources
-  name: string;
-  project_id: number;
-  description: string;
-}
-
-interface Project {
-  id: number;
-  name: string;
-  description: string;
-  tasks: Task[];
-  resources: Resource[];
-}
+import { Project, Task, Resource } from "../models/interfaces";
 
 interface ProjectProps {
   project: Project;
@@ -35,9 +17,16 @@ const ProjectControl: React.FC<ProjectProps> = ({ project, onDelete, onProjectUp
   const [editedProject, setEditedProject] = useState<Project>(project);
   const [showResourceModal, setShowResourceModal] = useState<boolean>(false);
   const [resources, setResources] = useState<Resource[]>(project.resources);
+  const [tasks, setTasks] = useState<Task[]>(project.tasks); // Manage tasks locally
+  const [showTaskModal, setShowTaskModal] = useState<boolean>(false); // State for task modal
+  const [showChat, setShowChat] = useState<boolean>(false);
 
   const handleAddResource = (savedResource: Resource) => {
     setResources((prevResources) => [...prevResources, savedResource]); // Add the new resource to the list
+  };
+
+  const handleAddTask = (savedTask: Task) => {
+    setTasks((prevTasks) => [...prevTasks, savedTask]); // Add the new task to the list
   };
 
   const navigate = useNavigate();
@@ -53,8 +42,6 @@ const ProjectControl: React.FC<ProjectProps> = ({ project, onDelete, onProjectUp
     }
   };
 
-
-  // Handle delete button click
   const handleDelete = async () => {
     try {
       const response = await axios.delete("http://localhost:8000/project", {
@@ -66,7 +53,6 @@ const ProjectControl: React.FC<ProjectProps> = ({ project, onDelete, onProjectUp
       console.error("Failed to delete project:", error);
     }
   };
-
 
   return (
     <div className="border p-4 rounded shadow-md bg-white dark:bg-gray-800 dark:border-gray-700 mb-4">
@@ -100,20 +86,36 @@ const ProjectControl: React.FC<ProjectProps> = ({ project, onDelete, onProjectUp
         <div>
           <h2 className="text-xl font-semibold text-black dark:text-white">{project.name}</h2>
           <p className="text-gray-600 dark:text-gray-400">{project.description}</p>
+
           <h3 className="text-lg font-medium text-black dark:text-white mt-4">Tasks:</h3>
           <ul className="list-disc pl-5">
-            {project.tasks.map((task) => (
+            {tasks.map((task) => (
               <li key={task.id} className="text-gray-700 dark:text-gray-300">
                 {task.name}
               </li>
             ))}
           </ul>
           <button
-            onClick={() => navigate(`/task/${project.id}`)}
+            onClick={() => setShowTaskModal(true)} // Open the task modal
             className="px-4 py-2 mt-4 bg-green-500 text-white rounded hover:bg-green-600"
           >
             Add Task
           </button>
+
+          {showTaskModal && (
+            <TaskControl
+              task={{
+                id: -1,
+                name: "",
+                project_id: project.id,
+                description: "",
+                acceptance_criteria: "",
+                priority: "NORMAL",
+              }}
+              onClose={() => setShowTaskModal(false)} // Close the modal
+              onSave={handleAddTask} // Add the new task to the list
+            />
+          )}
 
           <h3 className="text-lg font-medium text-black dark:text-white mt-4">Resources:</h3>
           <ul className="list-disc pl-5">
@@ -151,6 +153,18 @@ const ProjectControl: React.FC<ProjectProps> = ({ project, onDelete, onProjectUp
               Delete
             </button>
           </div>
+          <button
+            onClick={() => setShowChat(!showChat)}
+            className="px-4 py-2 mt-4 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            {showChat ? "Hide Chat" : "Show Chat"}
+          </button>
+
+          {showChat && (
+            <div className="mt-4">
+              <ChatSidebar attached={project} /> {/* Pass the project as the attached object */}
+            </div>
+          )}
         </div>
       )}
     </div>
