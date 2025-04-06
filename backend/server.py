@@ -31,63 +31,60 @@ async def read_root():
 
 @app.get("/projects", response_model=list[Project])
 async def get_projects() -> list[Project]:
-    return storage.getProjects()
+    return storage.get_all(Project)
 
 @app.get("/tasks", response_model=list[Task])
 async def get_tasks() -> list[Task]:
-    return storage.getTasks()
+    return storage.get_all(Task)
 
-@app.get("/resources")
-async def get_resources():
-    return storage.getResources()
+@app.get("/resources", response_model=list[Resource])
+async def get_resources() -> list[Resource]:
+    return storage.get_all(Resource)
 
 @app.get("/tasks/{project_id}", response_model=list[Task])
 async def get_project_tasks(project_id: int) -> list[Task]:
-    return storage.getProjectTasks(project_id)
+    return storage.get_by_project(Task, project_id)
 
 @app.post("/project", response_model=Project)
 async def add_project(project: Project) -> Project:
-    storage.addProject(project)
-    return project
+    return storage.add(project)
     
 @app.post("/task", response_model=Task)
 async def add_task(task: Task) -> Task:
-    storage.addTask(task)
-    return task
+    return storage.add(task)
 
 @app.post("/resource", response_model=Resource)
 async def add_resource(resource: Resource) -> Resource:
-    storage.addResource(resource)
-    return resource
+    return storage.add(resource)
 
 @app.patch("/project", response_model=Project)
 async def update_project(project: Project) -> Project:
-    storage.updateProject(project)
+    storage.update(project)
     return project
 
 @app.patch("/task", response_model=Task)
 async def update_task(task: Task) -> Task:
-    storage.updateTask(task)
+    storage.update(task)
     return task
 
-@app.patch("/resource", response_model=Task)
-async def update_resource(task: Task) -> Task:
-    storage.updateResource(task)
-    return task
+@app.patch("/resource", response_model=Resource)
+async def update_resource(resource: Resource) -> Resource:
+    storage.update(resource)
+    return resource
 
 @app.delete("/project", response_model=Project)
 async def delete_project(project: Project) -> Project:
-    storage.deleteProject(project)
+    storage.delete(project)
     return project
 
 @app.delete("/task", response_model=Task)
-async def delete_project(task: Task) -> Task:
-    storage.deleteProject(task)
+async def delete_task(task: Task) -> Task:
+    storage.delete(task)
     return task
 
 @app.delete("/resource", response_model=Resource)
-async def delete_project(resource: Resource) -> Resource:
-    storage.deleteProject(resource)
+async def delete_resource(resource: Resource) -> Resource:
+    storage.delete(resource)
     return resource
 
 @app.post("/chat", response_model=ChatResponse)

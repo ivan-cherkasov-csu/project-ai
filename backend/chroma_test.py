@@ -6,7 +6,7 @@ class VectorStoreTests(unittest.TestCase):
     db = Storage()
     
     def test_can_find_and_rehydrate_project(self) -> None:
-        query = "Honey Garlic Chicken"
+        query = "Garlic Shrimp Scampi"
         projects = list(self.db.find_item_type(query, Project))
         result = None
         for project in projects:
@@ -14,7 +14,8 @@ class VectorStoreTests(unittest.TestCase):
                 result = project
                 
         self.assertIsNotNone(result)
-        self.assertGreaterEqual(len(result.tasks), 1)
+        self.assertGreaterEqual(len(result.tasks), 3)
+        self.assertGreaterEqual(len(result.resources), 4)
     
     def test_can_retrieve_item(self) -> None:
         query = "Salad"

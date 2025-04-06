@@ -35,7 +35,7 @@ class ResourcesTable(Base):
     name = Column(String)
     description = Column(String)
 
-class Storage(object):
+class Storage:
     __engine: Engine
     __session: sessionmaker
     __index: VectorStore
@@ -45,135 +45,77 @@ class Storage(object):
         self.__session = sessionmaker(autocommit=False, autoflush=False, bind=self.__engine)
         Base.metadata.create_all(self.__engine)
         self.__index = VectorStore()
-        
-    def index(self) -> VectorStore: return self.__index
 
-    def addTask(self, task: Task) -> None:
-        if not task.project_id: raise ValueError("Task.project_id should be valid int value")
-        db_task = TasksTable(**task.model_dump())
-        db_task.id = None
+    def index(self) -> VectorStore:
+        return self.__index
+
+    def add(self, item: T) -> T:
+        table = self.__get_table(item)
+        if isinstance(item, Task) and item.project_id is None:
+            raise ValueError("Task must have a project_id")
+        if isinstance(item, Resource) and item.project_id is None:
+            raise ValueError("Resource must have a project_id")
+        db_item = table(**item.model_dump())
         with self.__session() as session:
-            session.add(db_task)
+            session.add(db_item)
             session.commit()
-            task.id = db_task.id
-            self.__index.add_item(task)
-            return task
+            item.id = db_item.id
+            self.__index.add_item(item)
+            return item
 
-    def addProject(self, project: Project) -> Project:
-        db_project = ProjectsTable(**project.model_dump())
-        db_project.id = None
+    def get_all(self, item_type: Type[T]) -> List[T]:
+        table = self.__get_table(item_type)
         with self.__session() as session:
-            session.add(db_project)
+            results = session.query(table).all()
+            return [item_type.model_validate(result) for result in results]
+
+    def get_by_project(self, item_type: Type[T], project_id: int) -> List[T]:
+        table = self.__get_table(item_type)
+        with self.__session() as session:
+            results = session.query(table).filter(table.project_id == project_id).all()
+            return [item_type.model_validate(result) for result in results]
+
+    def update(self, item: T) -> None:
+        table = self.__get_table(item)
+        with self.__session() as session:
+            db_item = session.query(table).filter(table.id == item.id).first()
+            if not db_item:
+                return None
+            for key, value in item.model_dump(exclude_unset=True).items():
+                setattr(db_item, key, value)
+            session.add(db_item)
             session.commit()
-            project.id = db_project.id
-            self.__index.add_item(project)
-            return project
-        
-    def addResource(self, resource: Resource) -> None:
-        db_resource = ResourcesTable(**resource.model_dump())
-        db_resource.id = None
-        with self.__session() as session:
-            session.add(db_resource)
-            session.commit()
-            resource.id = db_resource.id
-            self.__index.add_item(resource)
-            return resource
+            self.__index.update_item(item)
 
-    def getTasks(self) -> list[Task]:
+    def delete(self, item: T) -> None:
+        table = self.__get_table(item)
+        if isinstance(item, Project):
+            for task in item.tasks:
+                self.delete(task)
+            for resource in item.resources:
+                self.delete(resource)
         with self.__session() as session:
-            results = session.query(TasksTable).all()
-            tasks = []
-            for result in results:
-                try:
-                    task = Task.model_validate(result)
-                    tasks.append(task)
-                except Exception as e:
-                    print(f"id: {result.id}; name: {result.name}; desc: {result.description}")
-            return tasks
-    
-    def getResources(self) -> list[Resource]:
-        with self.__session() as session:
-            results = session.query(ResourcesTable).all()
-            return [Resource.model_validate(result) for result in results]
-        
-    def getProjects(self) -> list[Project]:
-        with self.__session() as session:
-            results = session.query(ProjectsTable).all()
-            return [Project.model_validate(result) for result in results]
-        
-    def getProjectTasks(self, project_id: int) -> list[Task]:
-        with self.__session() as session:
-            results = session.query(TasksTable).filter(TasksTable.project_id == project_id).all()
-            tasks = []
-            for result in results:
-                task = Task.model_validate(result)
-                tasks.append(task)
-            return tasks
-        
-    def getProjectResources(self, project_id) -> list[Resource]:
-        with self.__session() as session:
-            results = session.query(ResourcesTable).filter(ResourcesTable.project_id == project_id).all()
-            return [Resource.model_validate(result) for result in results]
-        
-    def updateTask(self, task: Task) -> None:
-        with self.__session() as session:
-            db_task = session.query(TasksTable).filter(TasksTable.id == task.id).first()
-            if not db_task: return None
-
-            for key, value in task.model_dump(exclude_unset=True).items():
-                setattr(db_task, key, value)
-
-            session.add(db_task)
-            session.commit()
-            self.__index.update_item(task)
-    
-    def updateResource(self, resource: Resource) -> None:
-        with self.__session() as session:
-            db_resource = session.query(ResourcesTable).filter(ResourcesTable.id == resource.id).first()
-            if not db_resource: return None
-
-            for key, value in resource.model_dump(exclude_unset=True).items():
-                setattr(db_resource, key, value)
-
-            session.add(db_resource)
-            session.commit()
-            self.__index.update_item(resource)
-
-    def updateProject(self, project: Project) -> None:
-        with self.__session() as session:
-            db_project = session.query(ProjectsTable).filter(ProjectsTable.id == project.id).first()
-            if not db_project: return None
-
-            for key, value in project.model_dump(exclude_unset=True).items():
-                setattr(db_project, key, value)
-
-            session.add(db_project)
-            session.commit()
-            self.__index.update_item(project)
-
-    def deleteTask(self, task: Task) -> None:
-        with self.__session() as session:
-            db_item = session.query(TasksTable).filter(TasksTable.id == task.id).first()
+            db_item = session.query(table).filter(table.id == item.id).first()
             if db_item:
                 session.delete(db_item)
                 session.commit()
-                self.__delete_index(task.id, Task)
+                self.__delete_index(item.id, type(item))
 
-    def deleteResource(self, resource: Resource) -> None:
-        with self.__session() as session:
-            db_item = session.query(ResourcesTable).filter(ResourcesTable.id == resource.id).first()
-            if db_item:
-                session.delete(db_item)
-                session.commit()
-                self.__delete_index(resource.id, Resource)
-                
+    def __get_table(self, item_or_type: Union[T, Type[T]]) -> Type:
+        if isinstance(item_or_type, Project) or item_or_type == Project:
+            return ProjectsTable
+        elif isinstance(item_or_type, Task) or item_or_type == Task:
+            return TasksTable
+        elif isinstance(item_or_type, Resource) or item_or_type == Resource:
+            return ResourcesTable
+        raise ValueError(f"Unsupported type: {item_or_type}")
+    
     def find_item_type(self, query: str, item_type: Type[T]) -> List[T]:
         items = self.__index.find_items(query, item_type)
         result = list(items)
         if item_type == Project:
             for item in result:
-                item.tasks = self.getProjectTasks(item.id)
-                item.resources = self.getProjectResources(item.id)
+                self.__rehydrate_project(item)
         return result
     
     def run(self, query: str) -> List[Union[Project, Task, Resource]]: return self.find_items(query)
@@ -183,34 +125,16 @@ class Storage(object):
         result = []
         for item in items:
             if item is Project:
-                item = self.rehydrate_project(item)
+                item = self.__rehydrate_project(item)
             result.append(item)
         return result
-        
-    def deleteProject(self, project: Project) -> None:
-        with self.__session() as session:
-            db_items = session.query(TasksTable).filter(TasksTable.project_id == project.id).all()
-            for item in db_items:
-                session.delete(item)
-                session.commit()
-                self.__delete_index(item.id, Task)
-            db_items = session.query(ResourcesTable).filter(ResourcesTable.project_id == project.id).all()
-            for item in db_items:
-                session.delete(item)
-                session.commit()
-                self.__delete_index(item.id, Resource)
-            db_item = session.query(ProjectsTable).filter(ProjectsTable.id == project.id).first()
-            if db_item:
-                session.delete(db_item)
-                session.commit()
-                self.__delete_index(project.id, Project)
-    
+
     def __delete_index(self, id: int, data_type: Type[T]) -> None:
         item_type = data_type.__name__
         uid = f"{item_type}_{id}"
         self.__index.delete_item(uid)
         
-    def rehydrate_project(self, item: Project) -> Project:
-        item.tasks = self.getProjectTasks(item.id)
-        item.resources = self.getProjectResources(item.id)
+    def __rehydrate_project(self, item: Project) -> Project:
+        item.tasks = self.get_by_project(Task, item.id)
+        item.resources = self.get_by_project(Resource, item.id)
         return item

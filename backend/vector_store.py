@@ -1,9 +1,6 @@
-# from langchain_community.vectorstores import SKLearnVectorStore
-# from langchain_community.document_loaders import TextLoader
+
 from langchain_ollama import OllamaEmbeddings
 from langchain_core.documents import Document
-# from langchain_core.vectorstores import VectorStoreRetriever
-# from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_chroma import Chroma
 from typing import Iterable, Type, Union
 from models import Project, Task, Resource, T, deserialize_json
@@ -18,13 +15,13 @@ class VectorStore(object):
             
     def add_item(self, item: T) -> None:
         item_type = type(item).__name__
-        id = f"{item_type}_{item.project_id}"
+        id = f"{item_type}_{item.id}"
         doc = Document(page_content=item.model_dump_json(exclude={"tasks", "resources"}), metadata={"item_type": item_type})
         self.__db.add_documents(documents=[doc], ids=[id])
         
     def update_item(self, item: T) -> None:
         item_type = type(item).__name__
-        id = f"{item_type}_{item.project_id}"
+        id = f"{item_type}_{item.id}"
         doc = Document(page_content=item.model_dump_json(exclude={"tasks", "resources"}), metadata={"item_type": item_type})
         self.__db.update_document(id, doc)
         
